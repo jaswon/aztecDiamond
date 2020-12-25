@@ -1,0 +1,13 @@
+{
+    "include": ["src/**/*"],
+    "exclude": ["node_modules"],
+    "compilerOptions": {
+        "target": "ES6",
+        "strict": true,
+        "esModuleInterop": true,
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "moduleResolution": "node"
+    }
+}
+

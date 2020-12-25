@@ -1,0 +1,16 @@
+{
+  "name": "arctic",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc --noEmit && esbuild src/index.ts --outfile=dist/index.js --bundle",
+    "dev": "onchange 'src/**/*' -- npm run build"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "esbuild": "^0.8.26",
+    "onchange": "^7.1.0"
+  }
+}

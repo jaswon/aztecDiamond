@@ -18,7 +18,6 @@
   }
 
   // src/index.ts
-  var sleep = (ms) => new Promise((res) => setTimeout(res, ms));
   function encode([x, y, xv, yv]) {
     const z = pair([x, y]);
     const dir = yv == 0 ? xv < 0 ? 2 : 0 : yv < 0 ? 3 : 1;
@@ -30,17 +29,29 @@
     const [x, y] = unpair(Math.floor(m / 4));
     return [x, y, xv, yv];
   }
+  var transitionTime = 400;
   async function run(ctx) {
     let minos = new Set();
     let order = 1;
     const fillables = new Set();
     fillables.add(pair([0, 1]));
     const id = ctx.getTransform();
-    const draw = async () => {
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
-      ctx.scale(ctx.canvas.width / (order * 2 + 2), -ctx.canvas.height / (order * 2 + 2));
-      for (let encMino of minos) {
+    const draw = async (fn) => new Promise((res) => {
+      let done;
+      let last = performance.now();
+      function loop(now) {
+        if (done)
+          return res();
+        requestAnimationFrame(loop);
+        ctx.setTransform(id);
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        done = fn(ctx, now - last);
+        last = now;
+      }
+      loop(last);
+    });
+    const fillMinos = (ms = minos) => {
+      for (let encMino of ms) {
         const [x, y, xv, yv] = decode(encMino);
         if (xv == 0) {
           ctx.fillStyle = yv > 0 ? "blue" : "green";
@@ -50,8 +61,6 @@
           ctx.fillRect(x + 1, y + 1, -1, -2);
         }
       }
-      ctx.setTransform(id);
-      await sleep(0);
     };
     while (true) {
       const fillCheckOrder = [...fillables.values()].sort((a, b) => {
@@ -59,6 +68,7 @@
         const [bx, by] = unpair(b);
         return bx + by - (ax + ay);
       });
+      const toFill = new Set();
       for (let fill of fillCheckOrder) {
         if (fillables.has(fill)) {
           const [fx, fy] = unpair(fill);
@@ -68,24 +78,70 @@
           fillables.delete(pair([fx + 1, fy - 1]));
           fillables.delete(pair([fx + 1, fy + 1]));
           if (Math.random() < 0.5) {
-            minos.add(encode([fx, fy, 1, 0]));
-            minos.add(encode([fx - 1, fy, -1, 0]));
+            toFill.add(encode([fx, fy, 1, 0]));
+            toFill.add(encode([fx - 1, fy, -1, 0]));
           } else {
-            minos.add(encode([fx, fy, 0, 1]));
-            minos.add(encode([fx, fy - 1, 0, -1]));
+            toFill.add(encode([fx, fy, 0, 1]));
+            toFill.add(encode([fx, fy - 1, 0, -1]));
           }
         }
       }
-      await draw();
+      await draw((() => {
+        let t = transitionTime;
+        return (ctx2, dt) => {
+          t -= dt;
+          ctx2.translate(ctx2.canvas.width / 2, ctx2.canvas.height / 2);
+          ctx2.scale(ctx2.canvas.width / (order * 2 + 2), -ctx2.canvas.height / (order * 2 + 2));
+          ctx2.globalAlpha = 1;
+          fillMinos();
+          ctx2.globalAlpha = 1 - t / transitionTime;
+          fillMinos(toFill);
+          return t < 0;
+        };
+      })());
+      for (let m of toFill) {
+        minos.add(m);
+      }
+      const toDelete = new Set();
       for (let m of minos) {
         const [x, y, xv, yv] = decode(m);
         const c = encode(xv == 0 ? [x, y + yv, xv, -yv] : [x + xv, y, -xv, yv]);
         if (minos.has(c)) {
           minos.delete(c);
+          toDelete.add(c);
           minos.delete(m);
+          toDelete.add(m);
         }
       }
-      await draw();
+      if (toDelete.size > 0) {
+        await draw((() => {
+          let t = transitionTime;
+          return (ctx2, dt) => {
+            t -= dt;
+            ctx2.translate(ctx2.canvas.width / 2, ctx2.canvas.height / 2);
+            ctx2.scale(ctx2.canvas.width / (order * 2 + 2), -ctx2.canvas.height / (order * 2 + 2));
+            ctx2.globalAlpha = 1;
+            fillMinos();
+            if (t > 0) {
+              ctx2.globalAlpha = t / transitionTime;
+              fillMinos(toDelete);
+            }
+            return t < 0;
+          };
+        })());
+      }
+      await draw((() => {
+        let t = transitionTime;
+        return (ctx2, dt) => {
+          t -= dt;
+          const f = 1 - t / transitionTime;
+          ctx2.translate(ctx2.canvas.width / 2, ctx2.canvas.height / 2);
+          ctx2.scale(ctx2.canvas.width / ((order + f) * 2 + 2), -ctx2.canvas.height / ((order + f) * 2 + 2));
+          ctx2.globalAlpha = 1;
+          fillMinos();
+          return t < 0;
+        };
+      })());
       order += 1;
       fillables.clear();
       for (let i = 0; i < order; i++) {
@@ -112,8 +168,28 @@
         }
         newMinos.add(encode([x, y, xv, yv]));
       }
+      const toMove = minos;
       minos = newMinos;
-      await draw();
+      await draw((() => {
+        let t = transitionTime;
+        return (ctx2, dt) => {
+          t -= dt;
+          const f = 1 - t / transitionTime;
+          ctx2.translate(ctx2.canvas.width / 2, ctx2.canvas.height / 2);
+          ctx2.scale(ctx2.canvas.width / (order * 2 + 2), -ctx2.canvas.height / (order * 2 + 2));
+          for (let encMino of toMove) {
+            const [x, y, xv, yv] = decode(encMino);
+            if (xv == 0) {
+              ctx2.fillStyle = yv > 0 ? "blue" : "green";
+              ctx2.fillRect(x + 1, y + 1 + f * yv, -2, -1);
+            } else {
+              ctx2.fillStyle = xv > 0 ? "red" : "yellow";
+              ctx2.fillRect(x + 1 + f * xv, y + 1, -1, -2);
+            }
+          }
+          return t < 0;
+        };
+      })());
     }
   }
   window.addEventListener("load", () => {

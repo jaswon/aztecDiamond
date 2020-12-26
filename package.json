@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc --noEmit && esbuild src/index.ts --outfile=dist/index.js --bundle",
+    "build": "tsc --noEmit && esbuild src/index.ts --outfile=dist/index.js --bundle && echo done",
     "dev": "onchange 'src/**/*' -- npm run build"
   },
   "author": "",

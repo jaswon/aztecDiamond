@@ -130,18 +130,6 @@
           };
         })());
       }
-      await draw((() => {
-        let t = transitionTime;
-        return (ctx2, dt) => {
-          t -= dt;
-          const f = 1 - t / transitionTime;
-          ctx2.translate(ctx2.canvas.width / 2, ctx2.canvas.height / 2);
-          ctx2.scale(ctx2.canvas.width / ((order + f) * 2 + 2), -ctx2.canvas.height / ((order + f) * 2 + 2));
-          ctx2.globalAlpha = 1;
-          fillMinos();
-          return t < 0;
-        };
-      })());
       order += 1;
       fillables.clear();
       for (let i = 0; i < order; i++) {
@@ -176,7 +164,7 @@
           t -= dt;
           const f = 1 - t / transitionTime;
           ctx2.translate(ctx2.canvas.width / 2, ctx2.canvas.height / 2);
-          ctx2.scale(ctx2.canvas.width / (order * 2 + 2), -ctx2.canvas.height / (order * 2 + 2));
+          ctx2.scale(ctx2.canvas.width / ((order + f) * 2), -ctx2.canvas.height / ((order + f) * 2));
           for (let encMino of toMove) {
             const [x, y, xv, yv] = decode(encMino);
             if (xv == 0) {

@@ -150,20 +150,6 @@ async function run(ctx: CanvasRenderingContext2D) {
         }
 
         // move minos
-        await draw((() => {
-            let t = transitionTime ;
-            return (ctx: CanvasRenderingContext2D, dt: number) => {
-                t -= dt;
-                const f = 1 - t/transitionTime;
-
-                ctx.translate(ctx.canvas.width/2, ctx.canvas.height/2);
-                ctx.scale(ctx.canvas.width/((order+f)*2+2), -ctx.canvas.height/((order+f)*2+2));
-
-                ctx.globalAlpha = 1;
-                fillMinos();
-                return t < 0;
-            }
-        })());
         order += 1;
 
         fillables.clear();
@@ -204,7 +190,7 @@ async function run(ctx: CanvasRenderingContext2D) {
                 const f = 1-t/transitionTime;
 
                 ctx.translate(ctx.canvas.width/2, ctx.canvas.height/2);
-                ctx.scale(ctx.canvas.width/(order*2+2), -ctx.canvas.height/(order*2+2));
+                ctx.scale(ctx.canvas.width/((order+f)*2), -ctx.canvas.height/((order+f)*2));
                 for (let encMino of toMove) {
                     const [x,y,xv,yv] = decode(encMino);
                     if (xv == 0) { // horizontal
